@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"    # Порт для подключения клиентов (pika)
+      - "15672:15672"  # Порт для веб-интерфейса управления
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest # Можно поменять
+      - RABBITMQ_DEFAULT_PASS=guest # И это тоже
+    networks:
+      - todo_network
+
+networks:
+  todo_network:
+    driver: bridge
