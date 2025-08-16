@@ -4,6 +4,9 @@ import pika
 from fastapi import HTTPException, Depends, Response
 from fastapi import APIRouter
 import json
+
+from uuid import UUID
+
 from . import schemas
 from .security import get_current_user, get_users, users_db, security, config
 
@@ -33,7 +36,7 @@ async def register_user(user: schemas.UserRegister, data_users=Depends(get_users
     users_db.append(new_user)
 
     try:
-        connection = pika.BlockingConnection(pika.ConnectionParameters(host='localhost'))
+        connection = pika.BlockingConnection(pika.ConnectionParameters(host='rabbitmq'))
         channel = connection.channel()
 
         exchange_name = 'user_events'
@@ -82,3 +85,12 @@ def logout(response: Response):
 @router.get("/protected", dependencies=[Depends(security.access_token_required)])
 def protected():
     return {"access": True}
+
+
+@router.get("/users/{user_id}", response_model=schemas.UserPublic)
+async def get_user_info_by_id(user_id: UUID, data_users=Depends(get_users)):
+    for user in data_users:
+        if user.id == user_id:
+            return user
+
+    raise HTTPException(status_code=404, detail="User not found")

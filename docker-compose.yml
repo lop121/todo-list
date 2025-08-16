@@ -5,11 +5,49 @@ services:
     image: rabbitmq:3-management
     container_name: rabbitmq
     ports:
-      - "5672:5672"    # Порт для подключения клиентов (pika)
+      - "5672:5672"    # Порт для подключения клиентов
       - "15672:15672"  # Порт для веб-интерфейса управления
     environment:
-      - RABBITMQ_DEFAULT_USER=guest # Можно поменять
-      - RABBITMQ_DEFAULT_PASS=guest # И это тоже
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
+      - RABBITMQ_LOG_LEVEL=error
+    networks:
+      - todo_network
+    healthcheck:
+      test: [ "CMD", "rabbitmqctl", "status" ]
+      start_period: 15s
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  auth_service:
+    build: ./services/auth
+    container_name: auth_service
+    ports:
+      # Внутренний порт 8000 -> Внешний порт 8001
+      - "8001:8000"
+    depends_on:
+      - rabbitmq
+    networks:
+      - todo_network
+
+  tasks_service:
+    build: ./services/tasks
+    container_name: tasks_service
+    ports:
+      # Внутренний порт 8000 -> Внешний порт 8002
+      - "8002:8000"
+    depends_on:
+      - rabbitmq
+    networks:
+      - todo_network
+
+  notifications_consumer:
+    build: ./services/nots
+    container_name: notifications_consumer
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
     networks:
       - todo_network
 

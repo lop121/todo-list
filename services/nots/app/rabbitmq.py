@@ -43,7 +43,7 @@ def callback(ch, method, properties, body):
 
 
 def start_consuming():
-    connection = pika.BlockingConnection(pika.ConnectionParameters(host='localhost'))
+    connection = pika.BlockingConnection(pika.ConnectionParameters(host='rabbitmq'))
     channel = connection.channel()
 
     exchange_name = 'user_events'
