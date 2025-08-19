@@ -1,10 +1,8 @@
 from datetime import datetime
 
-import jwt
-from sqlalchemy import Integer, func, LargeBinary
+from sqlalchemy import Integer, func
 from sqlalchemy.orm import Mapped, mapped_column
 
-from auth.app.security import security
 from auth.app.database import Base
 
 

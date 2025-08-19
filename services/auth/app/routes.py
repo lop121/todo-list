@@ -1,16 +1,12 @@
-from datetime import datetime, timezone
 from typing import List
-import pika
-from fastapi import HTTPException, Depends, Response
+from fastapi import Depends, Response
 from fastapi import APIRouter
-import json
-
-from uuid import UUID
 
 from . import schemas
-from .security import security, config
+from .rabbit_client import RabbitClient
+from .security import security
 from .service import UserService
-from .dependencies import get_user_service, get_user_service_without_token, get_current_user_payload
+from .dependencies import get_user_service, get_user_service_without_token, get_current_user_payload, get_rabbit_client
 
 router = APIRouter(
     prefix='/auth',
@@ -26,37 +22,11 @@ async def get_users(user_service: UserService = Depends(get_user_service)):
 @router.post("/register")
 async def register_user(
         user_in: schemas.UserRegister,
-        user_service: UserService = Depends(get_user_service_without_token)
+        user_service: UserService = Depends(get_user_service_without_token),
+        notification_service: RabbitClient = Depends(get_rabbit_client)
 ):
     user_id = await user_service.add_user(user_in)
-
-    # try:
-    #     connection = pika.BlockingConnection(pika.ConnectionParameters(host='rabbitmq'))
-    #     channel = connection.channel()
-    #
-    #     exchange_name = 'user_events'
-    #     queue_name = 'notifications_queue'
-    #
-    #     channel.exchange_declare(exchange=exchange_name, exchange_type='direct')
-    #
-    #     channel.queue_declare(queue=queue_name, durable=True)
-    #     channel.queue_bind(exchange=exchange_name, queue=queue_name, routing_key='user.registered')
-    #
-    #     message_body = {
-    #         "username": user_in.username,
-    #         "time_create": datetime.now(timezone.utc).isoformat()
-    #     }
-    #
-    #     channel.basic_publish(
-    #         exchange=exchange_name,
-    #         routing_key='user.registered',
-    #         body=json.dumps(message_body)
-    #     )
-    #
-    #     print(f" [x] Отправлено уведомление о пользователе: {user_in.username}")
-    #     connection.close()
-    # except pika.exceptions.AMQPConnectionError:
-    #     print(" [!] Ошибка с подключением к RabbitMQ, проверьте запущен ли сервер.")
+    notification_service.send_user_registered_notification(user_in.username)
 
     return {'your_id': user_id}
 
@@ -76,12 +46,6 @@ async def login(
     )
 
     return token_data
-
-
-@router.post("/logout")
-def logout(response: Response):
-    response.delete_cookie(config.JWT_ACCESS_COOKIE_NAME)
-    return {"status": "Вы успешно вышли из системы"}
 
 
 @router.get("/protected", dependencies=[Depends(get_current_user_payload)])

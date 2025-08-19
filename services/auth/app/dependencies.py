@@ -3,6 +3,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .database import async_session_maker
+from .rabbit_client import RabbitClient
 from .repository import UsersRepository
 from .service import UserService, TokenService
 
@@ -49,3 +50,10 @@ def get_current_user_payload(
     Зависимость, которая проверяет Bearer токен и возвращает его payload.
     """
     return token_service.verify_token(credentials.credentials)
+
+
+def get_rabbit_client() -> RabbitClient:
+    """
+    Зависимость для получения клиента RabbitMQ.
+    """
+    return RabbitClient()
