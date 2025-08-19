@@ -8,6 +8,7 @@ config.JWT_SECRET_KEY = "SECRET_KEY"
 config.JWT_ACCESS_COOKIE_NAME = "my_access_token"
 config.JWT_ACCESS_TOKEN_EXPIRES = timedelta(minutes=15)
 config.JWT_TOKEN_LOCATION = ["cookies"]
+config.JWT_ALGORITHM = "HS256"
 
 security = AuthX(config=config)
 
@@ -24,6 +25,3 @@ def get_current_user(payload: TokenPayload = Depends(security.access_token_requi
         if str(user.id) == user_id:
             return user
     raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Пользователь не найден")
-
-
-security = AuthX(config=config)

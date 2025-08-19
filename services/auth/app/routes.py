@@ -8,7 +8,9 @@ import json
 from uuid import UUID
 
 from . import schemas
-from .security import get_current_user, get_users, users_db, security, config
+from .security import get_current_user, get_users, security, config
+from .service import UserService
+from .dependencies import get_user_service
 
 router = APIRouter(
     prefix='/auth',
@@ -27,13 +29,11 @@ def me(current_user=Depends(get_current_user)):
 
 
 @router.post("/register")
-async def register_user(user: schemas.UserRegister, data_users=Depends(get_users)):
-    for us in data_users:
-        if user.username == us.username:
-            raise HTTPException(status_code=400, detail="Пользователь с таким username или id уже есть")
-
-    new_user = schemas.UserInDB(**user.model_dump())
-    users_db.append(new_user)
+async def register_user(
+        user_in: schemas.UserRegister,
+        user_service: UserService = Depends(get_user_service)
+):
+    user_id = await user_service.add_user(user_in)
 
     try:
         connection = pika.BlockingConnection(pika.ConnectionParameters(host='rabbitmq'))
@@ -48,7 +48,7 @@ async def register_user(user: schemas.UserRegister, data_users=Depends(get_users
         channel.queue_bind(exchange=exchange_name, queue=queue_name, routing_key='user.registered')
 
         message_body = {
-            "username": new_user.username,
+            "username": user_in.username,
             "time_create": datetime.now(timezone.utc).isoformat()
         }
 
@@ -58,12 +58,12 @@ async def register_user(user: schemas.UserRegister, data_users=Depends(get_users
             body=json.dumps(message_body)
         )
 
-        print(f" [x] Отправлено уведомление о пользователе: {new_user.username}")
+        print(f" [x] Отправлено уведомление о пользователе: {user_in.username}")
         connection.close()
     except pika.exceptions.AMQPConnectionError:
         print(" [!] Ошибка с подключением к RabbitMQ, проверьте запущен ли сервер.")
 
-    return {'status': True, 'your_id': new_user.id}
+    return {'your_id': user_id}
 
 
 @router.post("/login")
