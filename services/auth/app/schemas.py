@@ -1,18 +1,16 @@
 from datetime import datetime
 
-from pydantic import BaseModel, Field
-import uuid
+from pydantic import BaseModel
 
 
 class UserRegister(BaseModel):
     username: str
     password: str
-    full_name: str | None = None
+    fullname: str | None = None
 
 
 class UserInDB(UserRegister):
-    id: uuid.UUID = Field(default_factory=uuid.uuid4)
-    time_create: datetime | None = datetime.now()
+    created_at: datetime | None = datetime.now()
 
 
 class UserLogin(BaseModel):
